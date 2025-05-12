@@ -1,7 +1,7 @@
 import numpy as np
 from agents.customer import LearningCustomer
 from environment.queue import ProductQueue
-
+np.random.seed(23)
 class SupplyChainSim:
     def __init__(self, producer, product_classes, lambda_arrival=0.5, substitution_threshold=5):
         self.producer = producer
