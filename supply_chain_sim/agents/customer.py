@@ -1,6 +1,6 @@
 import numpy as np
 from collections import defaultdict
-
+np.random.seed(90)
 class LearningCustomer:
     def __init__(self, id, preferred_class, product_classes, epsilon=0.1, alpha=0.5, gamma=0.9):
         self.id = id

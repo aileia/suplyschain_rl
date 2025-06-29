@@ -1,7 +1,7 @@
 import numpy as np
-from agents.customer import LearningCustomer
 from environment.queue import ProductQueue
-np.random.seed(23)
+from agents.customer import LearningCustomer
+
 class SupplyChainSim:
     def __init__(self, producer, product_classes, lambda_arrival=0.5, substitution_threshold=5):
         self.producer = producer
@@ -19,26 +19,37 @@ class SupplyChainSim:
         self.price_history = {cls: [] for cls in product_classes}
         self.queue_history = {cls: [] for cls in product_classes}
 
+        # 🔁 Initialize exponential next arrival
+        self.next_arrival_time = self._sample_next_arrival()
+
+    def _sample_next_arrival(self):
+        return self.time + int(np.ceil(np.random.exponential(1 / self.lambda_arrival)))
+
 
     def step(self):
         prices = self.producer.get_prices()
         availability = {cls: True for cls in self.product_classes}
 
-        if np.random.rand() < self.lambda_arrival:
+        if self.time >= self.next_arrival_time:
             customer_id = self.total_customers
-            preferred = np.random.choice(self.product_classes)
+            preferred = np.random.choice(self.product_classes)  # random A, B, or C
             customer = LearningCustomer(customer_id, preferred, self.product_classes)
+            prices = self.producer.get_prices()
+            availability = {cls: True for cls in self.product_classes}
             chosen, state = customer.choose_product(prices, availability)
             self.customers[customer_id] = customer
             self.queue.enqueue(chosen, customer_id, self.time)
             self.total_customers += 1
+            self.next_arrival_time = self._sample_next_arrival()  # ⏱️ schedule next arrival
 
         queue_state = self.queue.get_queue_state()
         state = [queue_state.get(cls, 0) for cls in self.product_classes]
         self.producer.observe(state)
         product, price, action_idx = self.producer.act()
 
-        customer_info = self.queue.dequeue(product, self.time)
+        self.queue.start_service(product, self.time)
+        customer_info = self.queue.dequeue_ready(product, self.time)
+
         reward = price if customer_info else -1
         next_queue_state = self.queue.get_queue_state()
         next_state = [next_queue_state.get(cls, 0) for cls in self.product_classes]
